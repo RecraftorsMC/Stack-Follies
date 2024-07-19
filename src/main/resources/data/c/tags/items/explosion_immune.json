@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "#c:immune/minecraft/bad_respawn_point",
+    "#c:immune/minecraft/explosion",
+    "#c:immune/minecraft/fireworks",
+    "#c:immune/minecraft/player_explosion"
+  ]
+}

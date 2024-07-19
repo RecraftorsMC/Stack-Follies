@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "sf",
+  "version": "${version}",
+  "name": "Stack Follies",
+  "description": "Many item-related tomfooleries",
+  "authors": [
+    {
+      "name": "Recrators Team",
+      "contact": {
+        "homepage": "https://github.com/RecraftorsMC"
+      }
+    },
+    {
+      "name": "Nerjal Nosk"
+    }
+  ],
+  "contact": {
+    "repo": "https://github.com/NerjalNosk/Stack Follies"
+  },
+  "license": "GPL-3.0",
+  "icon": "assets/stack_follies/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "mc.recraftors.stack_follies.client.StackFolliesClient"
+    ],
+    "main": [
+      "mc.recraftors.stack_follies.StackFollies"
+    ]
+  },
+  "mixins": [
+    "stack_follies.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "${minecraft_version}"
+  },
+  "accessWidener": "stack_follies.accesswidener"
+}

@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    "#c:immune/minecraft/fireball",
+    "#c:immune/minecraft/hot_floor",
+    "#c:immune/minecraft/in_fire",
+    "#c:immune/minecraft/on_fire",
+    "#c:immune/minecraft/lava",
+    "#c:immune/minecraft/unattributed_fireball"
+  ]
+}
