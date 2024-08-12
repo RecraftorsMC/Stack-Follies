@@ -19,7 +19,7 @@ public class StackFolliesClient implements ClientModInitializer {
     public void onInitializeClient() {
     }
 
-    public static void animate(GroupedBakedModel model, Animation animation, long runningTime, float scale, Vector3f interpolation) {
+    public static void animate(GroupedBakedModelBuilder model, Animation animation, long runningTime, float scale, Vector3f interpolation) {
         float f = getRunningSeconds(animation, runningTime);
 
         for (Map.Entry<String, List<Transformation>> entry : animation.boneAnimations().entrySet()) {

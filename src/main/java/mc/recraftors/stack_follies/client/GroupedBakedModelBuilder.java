@@ -2,16 +2,19 @@ package mc.recraftors.stack_follies.client;
 
 import mc.recraftors.stack_follies.accessors.GroupedModelAccessor;
 import mc.recraftors.stack_follies.accessors.NamedElementAccessor;
+import mc.recraftors.stack_follies.util.Pair;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.model.ModelData;
 import net.minecraft.client.model.ModelPartData;
 import net.minecraft.client.model.ModelPartBuilder;
+import net.minecraft.client.model.ModelTransform;
 import net.minecraft.client.render.entity.animation.Animation;
 import net.minecraft.client.render.model.BakedModel;
 import net.minecraft.client.render.model.BakedQuad;
 import net.minecraft.client.render.model.BasicBakedModel;
 import net.minecraft.client.render.model.json.ModelElement;
 import net.minecraft.client.render.model.json.ModelOverrideList;
+import net.minecraft.client.render.model.json.ModelRotation;
 import net.minecraft.client.render.model.json.ModelTransformation;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.entity.AnimationState;
@@ -20,46 +23,70 @@ import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
+import java.util.*;
+import java.util.function.BiConsumer;
 
-public class GroupedBakedModel implements BakedModel {
+public class GroupedBakedModelBuilder implements BakedModel {
     public static final Vector3f INTERPOLATION_DEFAULT = new Vector3f();
 
     private final BasicBakedModel sourceModel;
     // Store accessor as a field to avoid repetitive cast
     private final GroupedModelAccessor sourceAccessor;
     private final Map<Integer, ModelPartData> cuboidMap;
+    private final Map<String, ModelPartData> namedMap;
     private final ModelData modelData = new ModelData();
-    GroupedBakedModel(BasicBakedModel model, GroupedModelAccessor accessor) {
+
+    GroupedBakedModelBuilder(BasicBakedModel model, GroupedModelAccessor accessor) {
         if (model != accessor) throw new IllegalArgumentException("Different models provided");
         this.sourceModel = model;
         this.sourceAccessor = accessor;
-        this.cuboidMap = this.bakeCuboid();
-        //TODO link names and model parts + setup unified model builder
+        Pair<Map<Integer, ModelPartData>, Map<String, ModelPartData>> t = bakeModel();
+        this.cuboidMap = Collections.unmodifiableMap(t.getFirst());
+        this.namedMap = Collections.unmodifiableMap(t.getSecond());
+        //TODO setup unified model builder
     }
 
-    private Map<Integer, ModelPartData> bakeCuboid() {
-        return this.sourceAccessor.sf_getGroups().stream()
-                .mapMulti(this::groupStreamMultiMapper)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    private void groupStreamMultiMapper(ModelGroupElement group, Consumer<Map.Entry<Integer, ModelPartData>> consumer) {
-        if (group.type == ModelGroupElement.GroupType.GROUP) {
-            for (ModelGroupElement e : group.getChildren()) {
-                groupStreamMultiMapper(e, consumer);
-            }
-            return;
+    private Pair<Map<Integer, ModelPartData>, Map<String, ModelPartData>> bakeModel() {
+        Map<Integer, ModelPartData> map1 = new HashMap<>();
+        Map<String, ModelPartData> map2 = new HashMap<>();
+        for (ModelGroupElement groupElement : this.sourceAccessor.sf_getGroups()) {
+            Pair<String, ModelPartData> pair = devolve(this.modelData.getRoot(), groupElement, map2::put, map1::put);
+            map2.put(groupElement.getName(), pair.getSecond());
         }
-        int index = group.element;
+        return Pair.of(map1, map2);
+    }
+
+    private Pair<String, ModelPartData> devolve(
+            ModelPartData parent, ModelGroupElement groupElement, BiConsumer<String, ModelPartData> c1,
+            BiConsumer<Integer, ModelPartData> c2
+    ) {
+        if (groupElement.type == ModelGroupElement.GroupType.GROUP) {
+            int x = groupElement.getOrigin()[0];
+            int y = groupElement.getOrigin()[1];
+            int z = groupElement.getOrigin()[2];
+            ModelPartBuilder builder = ModelPartBuilder.create().cuboid(x, y, z, 0, 0, 0);
+            ModelPartData data = parent.addChild(groupElement.getName(), builder, ModelTransform.NONE);
+            for (ModelGroupElement e : groupElement.getChildren()) {
+                Pair<String, ModelPartData> d = devolve(data, e, c1, c2);
+                c1.accept(d.getFirst(), d.getSecond());
+                c2.accept(e.element, d.getSecond());
+            }
+            return Pair.of(groupElement.getName(), data);
+        }
+        int index = groupElement.element;
         ModelElement element = this.sourceAccessor.sf_getElements().get(index);
         NamedElementAccessor elementAccessor = (NamedElementAccessor) element;
-        ModelPartBuilder builder = ModelPartBuilder.create().uv((int) elementAccessor.sf_getUvX(), (int) elementAccessor.sf_getUvY()).cuboid(); //TODO calculate offsets based on element coords
-        ModelPartData part = this.modelData.getRoot().addChild(elementAccessor.sf_getElemName(), builder, null); //TODO calculate pivot based on element rotation
-        consumer.accept(Map.entry(index, part));
+        ModelRotation rotation = elementAccessor.sf_getRotation();
+        float fX = element.from.x();
+        float fY = element.from.y();
+        float fZ = element.from.z();
+        float p = rotation.axis() == Direction.Axis.X ? rotation.angle() : 0;
+        float y = rotation.axis() == Direction.Axis.Y ? rotation.angle() : 0;
+        float r = rotation.axis() == Direction.Axis.Z ? rotation.angle() : 0;
+        ModelPartBuilder builder = ModelPartBuilder.create()
+                .uv((int) elementAccessor.sf_getUvX(), (int) elementAccessor.sf_getUvY())
+                .cuboid(fX, fY, fZ, element.to.x() - fX, element.to.y() - fY, element.to.z() - fZ);
+        return Pair.of(elementAccessor.sf_getElemName(), parent.addChild(elementAccessor.sf_getElemName(), builder, ModelTransform.of(rotation.origin().x, rotation.origin().y, rotation.origin().z, p, y, r)));
     }
 
     public void updateAnimation(AnimationState state, Animation animation, float progress) {
