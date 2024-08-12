@@ -22,6 +22,7 @@ import java.util.Map;
 @Mixin(ModelElement.class)
 public abstract class ModelElementMixin implements NamedElementAccessor {
     @Shadow @Final public Map<Direction, ModelElementFace> faces;
+    @Shadow @Final public ModelRotation rotation;
     @Unique private String sf_elemName;
     @Unique private float sf_uvX;
     @Unique private float sf_uvY;
@@ -51,5 +52,10 @@ public abstract class ModelElementMixin implements NamedElementAccessor {
     @Override
     public float sf_getUvY() {
         return this.sf_uvY;
+    }
+
+    @Override
+    public ModelRotation sf_getRotation() {
+        return this.rotation;
     }
 }
