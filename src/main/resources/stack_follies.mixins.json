@@ -12,7 +12,8 @@
     "client.JsonUnbakedModelDeserializerMixin",
     "client.JsonUnbakedModelMixin",
     "client.ModelElementDeserializerMixin",
-    "client.ModelElementMixin"
+    "client.ModelElementMixin",
+    "client.ModelLoaderMixin"
   ],
   "injectors": {
     "defaultRequire": 1

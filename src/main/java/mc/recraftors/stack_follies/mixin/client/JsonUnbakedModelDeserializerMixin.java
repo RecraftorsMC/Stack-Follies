@@ -32,10 +32,14 @@ public abstract class JsonUnbakedModelDeserializerMixin {
         }
         if (!b) return;
         JsonElement e = object.get("groups");
-        if (!e.isJsonArray()) return;
+        JsonElement t = object.get("texture_size");
+        if (t == null || e == null || !e.isJsonArray() || !t.isJsonArray()) return;
         List<ModelGroupElement> list = e.getAsJsonArray().asList().stream().map(ModelGroupElement::fromJson).toList();
+        int x = t.getAsJsonArray().get(0).getAsInt();
+        int y = t.getAsJsonArray().get(1).getAsInt();
         JsonUnbakedModel model = cir.getReturnValue();
         ((GroupedModelAccessor)model).sf_setGrouped(true);
         ((GroupedModelAccessor)model).sf_setGroups(list);
+        ((GroupedModelAccessor)model).sf_setTextureSize(x, y);
     }
 }

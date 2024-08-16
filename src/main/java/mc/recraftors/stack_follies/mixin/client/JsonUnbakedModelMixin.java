@@ -1,6 +1,7 @@
 package mc.recraftors.stack_follies.mixin.client;
 
 import mc.recraftors.stack_follies.accessors.GroupedModelAccessor;
+import mc.recraftors.stack_follies.client.GroupedBakedModelBuilder;
 import mc.recraftors.stack_follies.client.ModelGroupElement;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -31,6 +32,8 @@ public abstract class JsonUnbakedModelMixin implements GroupedModelAccessor {
 
     @Unique private boolean sf_grouped = false;
     @Unique private final List<ModelGroupElement> sf_groups = new ArrayList<>();
+    @Unique private int sf_textureSizeX;
+    @Unique private int sf_textureSizeY;
 
     @Override
     public boolean sf_isGrouped() {
@@ -53,53 +56,28 @@ public abstract class JsonUnbakedModelMixin implements GroupedModelAccessor {
         this.sf_groups.addAll(list);
     }
 
-    /*@Inject(
-            method = "bake(Lnet/minecraft/client/render/model/Baker;Lnet/minecraft/client/render/model/json/JsonUnbakedModel;Ljava/util/function/Function;Lnet/minecraft/client/render/model/ModelBakeSettings;Lnet/minecraft/util/Identifier;Z)Lnet/minecraft/client/render/model/BakedModel;",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/model/json/JsonUnbakedModel;getElements()Ljava/util/List;")
-    )
-    private void sf_bakeCEInit(Baker baker, JsonUnbakedModel parent, Function<SpriteIdentifier, Sprite> textureGetter,
-                               ModelBakeSettings settings, Identifier id, boolean hasDepth, CallbackInfoReturnable<BakedModel> cir,
-                               @Share("sf_keyMap") LocalRef<Map<Integer, List<BakedQuad>>> ref, @Share("sf_eC") LocalIntRef count) {
-        ref.set(new HashMap<>());
-        count.set(0);
+    @Override
+    public void sf_setTextureSize(int x, int y) {
+        this.sf_textureSizeX = x;
+        this.sf_textureSizeY = y;
     }
 
     @Inject(
             method = "bake(Lnet/minecraft/client/render/model/Baker;Lnet/minecraft/client/render/model/json/JsonUnbakedModel;Ljava/util/function/Function;Lnet/minecraft/client/render/model/ModelBakeSettings;Lnet/minecraft/util/Identifier;Z)Lnet/minecraft/client/render/model/BakedModel;",
-            at = @At(value = "INVOKE", target = "Ljava/util/Map;keySet()Ljava/util/Set;")
-    )
-    private void sf_bakeCount(Baker baker, JsonUnbakedModel parent, Function<SpriteIdentifier, Sprite> textureGetter,
-                              ModelBakeSettings settings, Identifier id, boolean hasDepth,
-                              CallbackInfoReturnable<BakedModel> cir, @Share("sf_eC") LocalIntRef count) {
-        count.set(count.get()+1);
-    }
-
-    @Redirect(
-            method = "bake(Lnet/minecraft/client/render/model/Baker;Lnet/minecraft/client/render/model/json/JsonUnbakedModel;Ljava/util/function/Function;Lnet/minecraft/client/render/model/ModelBakeSettings;Lnet/minecraft/util/Identifier;Z)Lnet/minecraft/client/render/model/BakedModel;",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/model/json/JsonUnbakedModel;createQuad(Lnet/minecraft/client/render/model/json/ModelElement;Lnet/minecraft/client/render/model/json/ModelElementFace;Lnet/minecraft/client/texture/Sprite;Lnet/minecraft/util/math/Direction;Lnet/minecraft/client/render/model/ModelBakeSettings;Lnet/minecraft/util/Identifier;)Lnet/minecraft/client/render/model/BakedQuad;")
-    )
-    private BakedQuad sf_bakeQuad(ModelElement element, ModelElementFace elementFace, Sprite sprite, Direction side,
-                                  ModelBakeSettings settings, Identifier id,
-                                  @Share("sf_keyMap") LocalRef<Map<Integer, List<BakedQuad>>> ref, @Share("sf_eC") LocalIntRef count) {
-        int i = count.get();
-        BakedQuad quad = createQuad(element, elementFace, sprite, side, settings, id);
-        ref.get().computeIfAbsent(i, n->new ArrayList<>()).add(quad);
-        return quad;
-    }*/
-
-    @Inject(
-            method = "bake(Lnet/minecraft/client/render/model/Baker;Lnet/minecraft/client/render/model/json/JsonUnbakedModel;Ljava/util/function/Function;Lnet/minecraft/client/render/model/ModelBakeSettings;Lnet/minecraft/util/Identifier;Z)Lnet/minecraft/client/render/model/BakedModel;",
-            at = @At(value = "RETURN", ordinal = 1)
+            at = @At(value = "RETURN", ordinal = 1),
+            cancellable = true
     )
     private void sf_bakeGroups(Baker baker, JsonUnbakedModel parent, Function<SpriteIdentifier, Sprite> textureGetter,
                                ModelBakeSettings settings, Identifier id, boolean hasDepth,
-                               CallbackInfoReturnable<BakedModel> cir/*, @Share("sf_keyMap")LocalRef<Map<Integer, List<BakedQuad>>> ref*/) {
+                               CallbackInfoReturnable<BakedModel> cir) {
         if (this.sf_grouped) {
             BakedModel model = cir.getReturnValue();
             if (!(model instanceof GroupedModelAccessor accessor)) return;
             accessor.sf_setGrouped(true);
             accessor.sf_setGroups(this.sf_groups);
             accessor.sf_setElements(this.getElements());
+            accessor.sf_setTextureSize(this.sf_textureSizeX, this.sf_textureSizeY);
+            cir.setReturnValue(new GroupedBakedModelBuilder(cir.getReturnValue(), accessor));
         }
     }
 }

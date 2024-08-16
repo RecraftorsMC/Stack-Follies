@@ -4,46 +4,54 @@ import mc.recraftors.stack_follies.accessors.GroupedModelAccessor;
 import mc.recraftors.stack_follies.accessors.NamedElementAccessor;
 import mc.recraftors.stack_follies.util.Pair;
 import net.minecraft.block.BlockState;
-import net.minecraft.client.model.ModelData;
-import net.minecraft.client.model.ModelPartData;
-import net.minecraft.client.model.ModelPartBuilder;
-import net.minecraft.client.model.ModelTransform;
-import net.minecraft.client.render.entity.animation.Animation;
+import net.minecraft.client.model.*;
 import net.minecraft.client.render.model.BakedModel;
 import net.minecraft.client.render.model.BakedQuad;
-import net.minecraft.client.render.model.BasicBakedModel;
 import net.minecraft.client.render.model.json.ModelElement;
 import net.minecraft.client.render.model.json.ModelOverrideList;
 import net.minecraft.client.render.model.json.ModelRotation;
 import net.minecraft.client.render.model.json.ModelTransformation;
 import net.minecraft.client.texture.Sprite;
-import net.minecraft.entity.AnimationState;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Vector3f;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 public class GroupedBakedModelBuilder implements BakedModel {
-    public static final Vector3f INTERPOLATION_DEFAULT = new Vector3f();
 
-    private final BasicBakedModel sourceModel;
+    private final BakedModel sourceModel;
     // Store accessor as a field to avoid repetitive cast
     private final GroupedModelAccessor sourceAccessor;
     private final Map<Integer, ModelPartData> cuboidMap;
     private final Map<String, ModelPartData> namedMap;
     private final ModelData modelData = new ModelData();
+    private final TexturedModelData texturedModelData;
 
-    GroupedBakedModelBuilder(BasicBakedModel model, GroupedModelAccessor accessor) {
+    private ModelPart model;
+
+    public GroupedBakedModelBuilder(BakedModel model, GroupedModelAccessor accessor) {
         if (model != accessor) throw new IllegalArgumentException("Different models provided");
+        Pair<Map<Integer, ModelPartData>, Map<String, ModelPartData>> t = bakeModel();
+        Pair<Integer, Integer> pair = accessor.sf_getSize();
         this.sourceModel = model;
         this.sourceAccessor = accessor;
-        Pair<Map<Integer, ModelPartData>, Map<String, ModelPartData>> t = bakeModel();
         this.cuboidMap = Collections.unmodifiableMap(t.getFirst());
         this.namedMap = Collections.unmodifiableMap(t.getSecond());
+        this.texturedModelData = TexturedModelData.of(this.modelData, pair.getFirst(), pair.getSecond());
+        StackFolliesClient.registerGroupedModel(this);
         //TODO setup unified model builder
+    }
+
+    GroupedBakedModel build() {
+        if (this.model == null) {
+            return StackFolliesClient.getModel(this);
+        }
+        this.model = this.texturedModelData.createModel();
+        Map<String, ModelPart> map = this.namedMap.entrySet().stream().map(e -> new AbstractMap.SimpleEntry<String, ModelPart>(e.getKey(), model.getChild(e.getKey()))).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+        return new GroupedBakedModel(map, model);
     }
 
     private Pair<Map<Integer, ModelPartData>, Map<String, ModelPartData>> bakeModel() {
@@ -89,18 +97,7 @@ public class GroupedBakedModelBuilder implements BakedModel {
         return Pair.of(elementAccessor.sf_getElemName(), parent.addChild(elementAccessor.sf_getElemName(), builder, ModelTransform.of(rotation.origin().x, rotation.origin().y, rotation.origin().z, p, y, r)));
     }
 
-    public void updateAnimation(AnimationState state, Animation animation, float progress) {
-        this.updateAnimation(state, animation, progress, 1f);
-    }
-
-    public void updateAnimation(AnimationState state, Animation animation, float progress, float speed) {
-        state.update(progress, speed);
-        state.run(s -> {
-            StackFolliesClient.animate(this, animation, s.getTimeRunning(), 1f, INTERPOLATION_DEFAULT);
-        });
-    }
-
-    public BasicBakedModel getSourceModel() {
+    public BakedModel getSourceModel() {
         return sourceModel;
     }
 
