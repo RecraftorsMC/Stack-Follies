@@ -27,6 +27,10 @@ public class GroupedBakedModel extends Model {
         this.layer = texture;
     }
 
+    ModelPart getRoot() {
+        return root;
+    }
+
     public void updateAnimation(AnimationState state, Animation animation, float progress) {
         this.updateAnimation(state, animation, progress, 1f);
     }

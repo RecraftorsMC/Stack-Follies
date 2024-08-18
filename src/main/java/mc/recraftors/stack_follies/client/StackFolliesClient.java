@@ -56,6 +56,7 @@ public class StackFolliesClient implements ClientModInitializer {
     public static void render(GroupedBakedModel model, MatrixStack matrices, int light, int overlay, float red, float green, float blue, float alpha) {
         VertexConsumer vertices = PROVIDER.getBuffer(model.getLayer());
         model.render(matrices, vertices, light, overlay, red, green, blue, alpha);
+        model.getRoot().traverse().forEach(ModelPart::resetTransform);
     }
 
 	private static float getRunningSeconds(Animation animation, long runningTime) {
