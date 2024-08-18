@@ -10,7 +10,6 @@ public class ModelGroupElement {
     final GroupType type;
     final String name;
     final int[] origin;
-    final int color;
     final int element;
     final ModelGroupElement[] children;
 
@@ -18,16 +17,14 @@ public class ModelGroupElement {
         this.type = GroupType.ELEMENT;
         this.name = null;
         this.origin = null;
-        this.color = -1;
         this.element = i;
         this.children = null;
     }
 
-    public ModelGroupElement(String name, int[] origin, int color, ModelGroupElement[] children) {
+    public ModelGroupElement(String name, int[] origin, ModelGroupElement[] children) {
         this.type = GroupType.GROUP;
         this.name = name;
         this.origin = Arrays.copyOf(origin, 3);
-        this.color = color;
         this.element = -1;
         this.children = Arrays.copyOf(children, children.length);
     }
@@ -40,7 +37,7 @@ public class ModelGroupElement {
         ModelGroupElement child = new ModelGroupElement(i);
         ModelGroupElement[] arr = Arrays.copyOf(this.children, this.children.length+1);
         arr[this.children.length] = child;
-        return new ModelGroupElement(this.name, this.origin, this.color, arr);
+        return new ModelGroupElement(this.name, this.origin, arr);
     }
 
     public GroupType getType() {
@@ -53,10 +50,6 @@ public class ModelGroupElement {
 
     public int[] getOrigin() {
         return origin;
-    }
-
-    public int getColor() {
-        return color;
     }
 
     public int getElement() {
@@ -77,9 +70,8 @@ public class ModelGroupElement {
         JsonArray originArray = object.getAsJsonArray("origin");
         int[] origin = new int[originArray.size()];
         for (int i = 0; i < originArray.size(); i++) origin[i] = originArray.get(i).getAsInt();
-        int color = object.get("color").getAsInt();
         ModelGroupElement[] children = object.getAsJsonArray("children").asList().stream().map(ModelGroupElement::fromJson).toArray(ModelGroupElement[]::new);
-        return new ModelGroupElement(name, origin, color, children);
+        return new ModelGroupElement(name, origin, children);
     }
 
     public enum GroupType {
