@@ -27,7 +27,6 @@ public class GroupedBakedModelBuilder implements BakedModel {
     private final BakedModel sourceModel;
     // Store accessor as a field to avoid repetitive cast
     private final GroupedModelAccessor sourceAccessor;
-    private final Map<Integer, ModelPartData> cuboidMap;
     private final Map<String, ModelPartData> namedMap;
     private final ModelData modelData = new ModelData();
     private final TexturedModelData texturedModelData;
@@ -36,12 +35,11 @@ public class GroupedBakedModelBuilder implements BakedModel {
 
     public GroupedBakedModelBuilder(BakedModel model, GroupedModelAccessor accessor) {
         if (model != accessor) throw new IllegalArgumentException("Different models provided");
-        Pair<Map<Integer, ModelPartData>, Map<String, ModelPartData>> t = bakeModel();
+        Map<String, ModelPartData> map = bakeModel();
         Pair<Integer, Integer> pair = accessor.sf_getTextureSize();
         this.sourceModel = model;
         this.sourceAccessor = accessor;
-        this.cuboidMap = Collections.unmodifiableMap(t.getFirst());
-        this.namedMap = Collections.unmodifiableMap(t.getSecond());
+        this.namedMap = Collections.unmodifiableMap(map);
         this.texturedModelData = TexturedModelData.of(this.modelData, pair.getFirst(), pair.getSecond());
         StackFolliesClient.registerGroupedModel(this);
     }
@@ -58,34 +56,31 @@ public class GroupedBakedModelBuilder implements BakedModel {
         return new GroupedBakedModel(map, model, layer);
     }
 
-    private Pair<Map<Integer, ModelPartData>, Map<String, ModelPartData>> bakeModel() {
-        Map<Integer, ModelPartData> map1 = new HashMap<>();
-        Map<String, ModelPartData> map2 = new HashMap<>();
+    private Map<String, ModelPartData> bakeModel() {
+        Map<String, ModelPartData> map = new HashMap<>();
         for (ModelGroupElement groupElement : this.sourceAccessor.sf_getGroups()) {
-            Pair<String, ModelPartData> pair = devolve(this.modelData.getRoot(), groupElement, map2::put, map1::put);
-            map2.put(groupElement.getName(), pair.getSecond());
+            Pair<String, ModelPartData> pair = devolve(this.modelData.getRoot(), groupElement, map::put);
+            map.put(groupElement.getName(), pair.getSecond());
         }
-        return Pair.of(map1, map2);
+        return map;
     }
 
     private Pair<String, ModelPartData> devolve(
-            ModelPartData parent, ModelGroupElement groupElement, BiConsumer<String, ModelPartData> c1,
-            BiConsumer<Integer, ModelPartData> c2
+            ModelPartData parent, ModelGroupElement groupElement, BiConsumer<String, ModelPartData> c1
     ) {
-        if (groupElement.type == ModelGroupElement.GroupType.GROUP) {
+        if (groupElement.getType() == ModelGroupElement.GroupType.GROUP) {
             int x = groupElement.getOrigin()[0];
             int y = groupElement.getOrigin()[1];
             int z = groupElement.getOrigin()[2];
             ModelPartBuilder builder = ModelPartBuilder.create().cuboid(x, y, z, 0, 0, 0);
             ModelPartData data = parent.addChild(groupElement.getName(), builder, ModelTransform.NONE);
             for (ModelGroupElement e : groupElement.getChildren()) {
-                Pair<String, ModelPartData> d = devolve(data, e, c1, c2);
+                Pair<String, ModelPartData> d = devolve(data, e, c1);
                 c1.accept(d.getFirst(), d.getSecond());
-                c2.accept(e.element, d.getSecond());
             }
             return Pair.of(groupElement.getName(), data);
         }
-        int index = groupElement.element;
+        int index = groupElement.getElement();
         ModelElement element = this.sourceAccessor.sf_getElements().get(index);
         NamedElementAccessor elementAccessor = (NamedElementAccessor) element;
         ModelRotation rotation = elementAccessor.sf_getRotation();
@@ -111,14 +106,6 @@ public class GroupedBakedModelBuilder implements BakedModel {
             });
         });
         return map;
-    }
-
-    public BakedModel getSourceModel() {
-        return sourceModel;
-    }
-
-    public GroupedModelAccessor getSourceAccessor() {
-        return sourceAccessor;
     }
 
     @Override

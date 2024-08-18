@@ -29,17 +29,6 @@ public class ModelGroupElement {
         this.children = Arrays.copyOf(children, children.length);
     }
 
-    /**
-     * @throws UnsupportedOperationException When applied on an {@code element} group element
-     */
-    public ModelGroupElement withElement(int i) {
-        if (this.type == GroupType.ELEMENT) throw new UnsupportedOperationException();
-        ModelGroupElement child = new ModelGroupElement(i);
-        ModelGroupElement[] arr = Arrays.copyOf(this.children, this.children.length+1);
-        arr[this.children.length] = child;
-        return new ModelGroupElement(this.name, this.origin, arr);
-    }
-
     public GroupType getType() {
         return type;
     }
