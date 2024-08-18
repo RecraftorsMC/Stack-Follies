@@ -18,11 +18,13 @@ public class GroupedBakedModel extends Model {
 
     private final Map<String, ModelPart> partMap;
     private final ModelPart root;
+    private final RenderLayer layer;
 
-    GroupedBakedModel(Map<String, ModelPart> map, ModelPart root) {
+    GroupedBakedModel(Map<String, ModelPart> map, ModelPart root, RenderLayer texture) {
         super(RenderLayer::getEntityTranslucent);
         this.partMap = Collections.unmodifiableMap(map);
         this.root = root;
+        this.layer = texture;
     }
 
     public void updateAnimation(AnimationState state, Animation animation, float progress) {
@@ -36,6 +38,10 @@ public class GroupedBakedModel extends Model {
 
     Optional<ModelPart> getChild(String key) {
         return Optional.ofNullable(partMap.get(key));
+    }
+
+    public RenderLayer getLayer() {
+        return layer;
     }
 
     @Override

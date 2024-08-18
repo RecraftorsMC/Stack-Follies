@@ -21,7 +21,6 @@ import java.util.Map;
 @Environment(EnvType.CLIENT)
 @Mixin(ModelElement.class)
 public abstract class ModelElementMixin implements NamedElementAccessor {
-    @Shadow @Final public Map<Direction, ModelElementFace> faces;
     @Shadow @Final public ModelRotation rotation;
     @Unique private String sf_elemName;
     @Unique private float sf_uvX;

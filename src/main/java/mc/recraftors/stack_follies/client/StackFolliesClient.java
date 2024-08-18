@@ -1,12 +1,21 @@
 package mc.recraftors.stack_follies.client;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.model.ModelPart;
+import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.animation.Animation;
 import net.minecraft.client.render.entity.animation.Keyframe;
 import net.minecraft.client.render.entity.animation.Transformation;
+import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.render.model.BakedModel;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.world.World;
 import org.joml.Vector3f;
 
 import java.util.*;
@@ -15,6 +24,7 @@ public class StackFolliesClient implements ClientModInitializer {
     public static final String MODEL_GROUP_PROCESSOR_KEY = "sf$computeGroups";
     public static final String MODEL_ELEM_NAME_KEY = "name";
     private static final Map<BakedModel, GroupedBakedModel> GROUPED_MODEL_REGISTRY = new HashMap<>();
+    private static final VertexConsumerProvider.Immediate PROVIDER = VertexConsumerProvider.immediate(new BufferBuilder(256));
 
     @Override
     public void onInitializeClient() {
@@ -43,6 +53,11 @@ public class StackFolliesClient implements ClientModInitializer {
         }
     }
 
+    public static void render(GroupedBakedModel model, MatrixStack matrices, int light, int overlay, float red, float green, float blue, float alpha) {
+        VertexConsumer vertices = PROVIDER.getBuffer(model.getLayer());
+        model.render(matrices, vertices, light, overlay, red, green, blue, alpha);
+    }
+
 	private static float getRunningSeconds(Animation animation, long runningTime) {
 		float f = (float)runningTime / 1000.0F;
 		return animation.looping() ? f % animation.lengthInSeconds() : f;
@@ -59,5 +74,21 @@ public class StackFolliesClient implements ClientModInitializer {
 
     static GroupedBakedModel getModel(BakedModel model) {
         return GROUPED_MODEL_REGISTRY.get(model);
+    }
+
+    public static Optional<GroupedBakedModel> getModel(ItemStack stack, int seed) {
+        return getModel(stack,null,  null, seed);
+    }
+
+    public static Optional<GroupedBakedModel> getModel(ItemStack stack, World world, int seed) {
+        return getModel(stack, world, null, seed);
+    }
+
+    public static Optional<GroupedBakedModel> getModel(ItemStack stack, World world, LivingEntity entity, int seed) {
+        return getModel(stack, world, entity, seed, MinecraftClient.getInstance().getItemRenderer());
+    }
+
+    public static Optional<GroupedBakedModel> getModel(ItemStack stack, World world, LivingEntity entity, int seed, ItemRenderer renderer) {
+        return Optional.ofNullable(GROUPED_MODEL_REGISTRY.get(renderer.getModel(stack, world, entity, seed)));
     }
 }

@@ -1,5 +1,6 @@
 package mc.recraftors.stack_follies.mixin.client;
 
+import com.mojang.datafixers.util.Either;
 import mc.recraftors.stack_follies.accessors.GroupedModelAccessor;
 import mc.recraftors.stack_follies.client.GroupedBakedModelBuilder;
 import mc.recraftors.stack_follies.client.ModelGroupElement;
@@ -13,6 +14,7 @@ import net.minecraft.client.render.model.json.ModelElement;
 import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.util.Identifier;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -20,9 +22,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Environment(EnvType.CLIENT)
 @Mixin(JsonUnbakedModel.class)
@@ -30,6 +35,7 @@ public abstract class JsonUnbakedModelMixin implements GroupedModelAccessor {
 
     @Shadow public abstract List<ModelElement> getElements();
 
+    @Shadow @Final protected Map<String, Either<SpriteIdentifier, String>> textureMap;
     @Unique private boolean sf_grouped = false;
     @Unique private final List<ModelGroupElement> sf_groups = new ArrayList<>();
     @Unique private int sf_textureSizeX;
@@ -77,6 +83,11 @@ public abstract class JsonUnbakedModelMixin implements GroupedModelAccessor {
             accessor.sf_setGroups(this.sf_groups);
             accessor.sf_setElements(this.getElements());
             accessor.sf_setTextureSize(this.sf_textureSizeX, this.sf_textureSizeY);
+            accessor.sf_setTextureMap(this.textureMap.entrySet().stream()
+                    .map(e -> new AbstractMap.SimpleImmutableEntry<>(e.getKey(), e.getValue()
+                            .mapRight(Identifier::tryParse).mapLeft(SpriteIdentifier::getTextureId)
+                            .right().orElseGet(e.getValue().left().get()::getTextureId)))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
             cir.setReturnValue(new GroupedBakedModelBuilder(cir.getReturnValue(), accessor));
         }
     }

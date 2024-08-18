@@ -7,6 +7,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.model.BasicBakedModel;
 import net.minecraft.client.render.model.json.ModelElement;
+import net.minecraft.util.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
@@ -19,6 +20,7 @@ public abstract class BasicBakedModelMixin implements GroupedModelAccessor {
     @Unique private final List<ModelGroupElement> sf_groupElements = new ArrayList<>();
     @Unique private final List<ModelElement> sf_modelElements = new ArrayList<>();
     @Unique private final Map<String, ModelGroupElement> sf_namedGroups = new HashMap<>();
+    @Unique private final Map<String, Identifier> sf_textureMap = new HashMap<>();
     @Unique private int sf_textureSizeX;
     @Unique private int sf_textureSizeY;
 
@@ -75,7 +77,18 @@ public abstract class BasicBakedModelMixin implements GroupedModelAccessor {
     }
 
     @Override
-    public Pair<Integer, Integer> sf_getSize() {
+    public Pair<Integer, Integer> sf_getTextureSize() {
         return Pair.of(this.sf_textureSizeX, this.sf_textureSizeY);
+    }
+
+    @Override
+    public void sf_setTextureMap(Map<String, Identifier> map) {
+        this.sf_textureMap.clear();
+        this.sf_textureMap.putAll(map);
+    }
+
+    @Override
+    public Map<String, Identifier> sf_getTextureMap() {
+        return Collections.unmodifiableMap(this.sf_textureMap);
     }
 }

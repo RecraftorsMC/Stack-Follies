@@ -5,6 +5,7 @@ import mc.recraftors.stack_follies.accessors.NamedElementAccessor;
 import mc.recraftors.stack_follies.util.Pair;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.model.*;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.model.BakedModel;
 import net.minecraft.client.render.model.BakedQuad;
 import net.minecraft.client.render.model.json.ModelElement;
@@ -12,6 +13,7 @@ import net.minecraft.client.render.model.json.ModelOverrideList;
 import net.minecraft.client.render.model.json.ModelRotation;
 import net.minecraft.client.render.model.json.ModelTransformation;
 import net.minecraft.client.texture.Sprite;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
@@ -35,23 +37,25 @@ public class GroupedBakedModelBuilder implements BakedModel {
     public GroupedBakedModelBuilder(BakedModel model, GroupedModelAccessor accessor) {
         if (model != accessor) throw new IllegalArgumentException("Different models provided");
         Pair<Map<Integer, ModelPartData>, Map<String, ModelPartData>> t = bakeModel();
-        Pair<Integer, Integer> pair = accessor.sf_getSize();
+        Pair<Integer, Integer> pair = accessor.sf_getTextureSize();
         this.sourceModel = model;
         this.sourceAccessor = accessor;
         this.cuboidMap = Collections.unmodifiableMap(t.getFirst());
         this.namedMap = Collections.unmodifiableMap(t.getSecond());
         this.texturedModelData = TexturedModelData.of(this.modelData, pair.getFirst(), pair.getSecond());
         StackFolliesClient.registerGroupedModel(this);
-        //TODO setup unified model builder
     }
 
     GroupedBakedModel build() {
-        if (this.model == null) {
+        if (this.model != null) {
             return StackFolliesClient.getModel(this);
         }
         this.model = this.texturedModelData.createModel();
-        Map<String, ModelPart> map = this.namedMap.entrySet().stream().map(e -> new AbstractMap.SimpleEntry<String, ModelPart>(e.getKey(), model.getChild(e.getKey()))).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
-        return new GroupedBakedModel(map, model);
+        Map<String, ModelPart> map = this.namedMap.keySet().stream().map(modelPartData -> new AbstractMap.SimpleEntry<>(modelPartData, model.getChild(modelPartData))).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+        Map<String, Integer> tMap = this.textureUsages();
+        Identifier id = tMap.entrySet().stream().min((e1, e2) -> e2.getValue().compareTo(e1.getValue())).map(e -> this.sourceAccessor.sf_getTextureMap().get(e.getKey())).map(i -> i.getPath().matches(".*\\.[^/]+") ? i : Identifier.of(i.getNamespace(), i.getPath()+".png")).orElseThrow();
+        RenderLayer layer = RenderLayer.getEntityTranslucent(id);
+        return new GroupedBakedModel(map, model, layer);
     }
 
     private Pair<Map<Integer, ModelPartData>, Map<String, ModelPartData>> bakeModel() {
@@ -95,6 +99,18 @@ public class GroupedBakedModelBuilder implements BakedModel {
                 .uv((int) elementAccessor.sf_getUvX(), (int) elementAccessor.sf_getUvY())
                 .cuboid(fX, fY, fZ, element.to.x() - fX, element.to.y() - fY, element.to.z() - fZ);
         return Pair.of(elementAccessor.sf_getElemName(), parent.addChild(elementAccessor.sf_getElemName(), builder, ModelTransform.of(rotation.origin().x, rotation.origin().y, rotation.origin().z, p, y, r)));
+    }
+
+    private Map<String, Integer> textureUsages() {
+        Map<String, Integer> map = new HashMap<>();
+        this.sourceAccessor.sf_getElements().forEach(e -> {
+            e.faces.values().forEach(f -> {
+                int i = map.getOrDefault(f.textureId, 0);
+                i++;
+                map.put(f.textureId, i);
+            });
+        });
+        return map;
     }
 
     public BakedModel getSourceModel() {
