@@ -46,6 +46,7 @@ public class ModelGroupElement {
     }
 
     public ModelGroupElement[] getChildren() {
+        if (this.children == null) return null;
         return Arrays.copyOf(this.children, this.children.length);
     }
 
