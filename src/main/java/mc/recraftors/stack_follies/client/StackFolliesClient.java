@@ -24,6 +24,7 @@ import java.util.*;
 public class StackFolliesClient implements ClientModInitializer {
     public static final String MODEL_GROUP_PROCESSOR_KEY = "sf$computeGroups";
     public static final String MODEL_ELEM_NAME_KEY = "name";
+    private static final Map<BakedModel, GroupedBakedModelBuilder> BUILDER_MODEL_REGISTRY = new HashMap<>();
     private static final Map<BakedModel, GroupedBakedModel> GROUPED_MODEL_REGISTRY = new HashMap<>();
     private static final VertexConsumerProvider.Immediate PROVIDER = VertexConsumerProvider.immediate(new BufferBuilder(256));
 
@@ -89,14 +90,24 @@ public class StackFolliesClient implements ClientModInitializer {
 
     public static void modelReloadHandler() {
         GROUPED_MODEL_REGISTRY.clear();
+        BUILDER_MODEL_REGISTRY.clear();
     }
 
     public static void registerGroupedModel(GroupedBakedModelBuilder groupedModel) {
         Objects.requireNonNull(groupedModel);
-        GROUPED_MODEL_REGISTRY.putIfAbsent(groupedModel, groupedModel.build());
+        BUILDER_MODEL_REGISTRY.putIfAbsent(groupedModel, groupedModel);
+    }
+
+    private static void request(BakedModel model) {
+        if (GROUPED_MODEL_REGISTRY.containsKey(model)) return;
+        BUILDER_MODEL_REGISTRY.computeIfPresent(model, (m, b) -> {
+            GROUPED_MODEL_REGISTRY.putIfAbsent(m, b.build());
+            return b;
+        });
     }
 
     static GroupedBakedModel getModel(BakedModel model) {
+        request(model);
         return GROUPED_MODEL_REGISTRY.get(model);
     }
 
@@ -113,6 +124,8 @@ public class StackFolliesClient implements ClientModInitializer {
     }
 
     public static Optional<GroupedBakedModel> getModel(ItemStack stack, World world, LivingEntity entity, int seed, ItemRenderer renderer) {
-        return Optional.ofNullable(GROUPED_MODEL_REGISTRY.get(renderer.getModel(stack, world, entity, seed)));
+        BakedModel model = renderer.getModel(stack, world, entity, seed);
+        request(model);
+        return Optional.ofNullable(GROUPED_MODEL_REGISTRY.get(model));
     }
 }
