@@ -26,11 +26,28 @@ public abstract class ModelElementMixin implements NamedElementAccessor {
     @Unique private float sf_uvX;
     @Unique private float sf_uvY;
 
+    @Unique private static final Direction[] SF_X_ARR = new Direction[]{
+            Direction.UP, Direction.DOWN, Direction.EAST, Direction.NORTH, Direction.WEST, Direction.SOUTH
+    };
+    @Unique private static final Direction[] SF_Y_ARR = new Direction[]{
+            Direction.EAST, Direction.UP, Direction.NORTH, Direction.DOWN, Direction.WEST, Direction.SOUTH
+    };
+
     @Inject(method = "<init>", at = @At("RETURN"))
     private void sf_initFaceUvInit(Vector3f from, Vector3f to, Map<Direction, ModelElementFace> faces,
                                    ModelRotation rotation, boolean shade, CallbackInfo ci) {
-        this.sf_uvX = faces.get(Direction.UP).textureData.uvs[0];
-        this.sf_uvY = faces.get(Direction.EAST).textureData.uvs[1];
+        ModelElementFace x = null;
+        ModelElementFace y = null;
+        for (Direction d : SF_X_ARR) {
+            x = faces.get(d);
+            if (x != null) break;
+        }
+        for (Direction d : SF_Y_ARR) {
+            y = faces.get(d);
+            if (y != null) break;
+        }
+        this.sf_uvX = x.textureData.uvs[0];
+        this.sf_uvY = y.textureData.uvs[1];
     }
 
     @Override
