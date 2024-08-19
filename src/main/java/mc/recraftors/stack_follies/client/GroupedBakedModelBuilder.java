@@ -49,7 +49,9 @@ public class GroupedBakedModelBuilder implements BakedModel {
             return StackFolliesClient.getModel(this);
         }
         this.model = this.texturedModelData.createModel();
-        Map<String, ModelPart> map = this.namedMap.keySet().stream().map(modelPartData -> new AbstractMap.SimpleEntry<>(modelPartData, model.getChild(modelPartData))).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+        Map<String, ModelPart> map = this.namedMap.keySet().stream()
+                .map(name -> new AbstractMap.SimpleEntry<>(name, model.getChild(name)))
+                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
         Map<String, Integer> tMap = this.textureUsages();
         Identifier id = tMap.entrySet().stream().min((e1, e2) -> e2.getValue().compareTo(e1.getValue())).map(e -> this.sourceAccessor.sf_getTextureMap().get(e.getKey())).map(i -> i.getPath().matches(".*\\.[^/]+") ? i : Identifier.of(i.getNamespace(), i.getPath()+".png")).orElseThrow();
         RenderLayer layer = RenderLayer.getEntityTranslucent(id);
