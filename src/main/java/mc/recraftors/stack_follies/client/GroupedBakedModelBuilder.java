@@ -20,6 +20,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class GroupedBakedModelBuilder implements BakedModel {
@@ -60,42 +62,73 @@ public class GroupedBakedModelBuilder implements BakedModel {
 
     private Map<String, ModelPartData> bakeModel() {
         Map<String, ModelPartData> map = new HashMap<>();
+        Set<ModelGroupElement> set = new HashSet<>(this.sourceAccessor.sf_getGroups());
         for (ModelGroupElement groupElement : this.sourceAccessor.sf_getGroups()) {
-            Pair<String, ModelPartData> pair = devolve(this.modelData.getRoot(), groupElement, map::put);
-            map.put(groupElement.getName(), pair.getSecond());
+            if (groupElement.getType() == ModelGroupElement.GroupType.ELEMENT) continue;
+            Pair<String, ModelPartData> pair = devolve(this.modelData.getRoot(), groupElement, map::put, set::remove, map::containsKey);
+            if (pair.hasFirst()) map.put(groupElement.getName(), pair.getSecond());
+        }
+        for (ModelGroupElement groupElement : set) {
+            Pair<String, ModelPartData> pair = devolve(this.modelData.getRoot(), groupElement, map::put, set::remove, map::containsKey);
+            if (pair.hasFirst()) map.put(groupElement.getName(), pair.getSecond());
         }
         return map;
     }
 
     private Pair<String, ModelPartData> devolve(
-            ModelPartData parent, ModelGroupElement groupElement, BiConsumer<String, ModelPartData> c1
+            ModelPartData parent, ModelGroupElement groupElement, BiConsumer<String, ModelPartData> c1,
+            Consumer<ModelGroupElement> c2, Predicate<String> predicate
     ) {
+        if (predicate.test(groupElement.getName())) return Pair.ofNull();
         if (groupElement.getType() == ModelGroupElement.GroupType.GROUP) {
+            c2.accept(groupElement);
             int x = groupElement.getOrigin()[0];
             int y = groupElement.getOrigin()[1];
             int z = groupElement.getOrigin()[2];
             ModelPartBuilder builder = ModelPartBuilder.create().cuboid(x, y, z, 0, 0, 0);
             ModelPartData data = parent.addChild(groupElement.getName(), builder, ModelTransform.NONE);
             for (ModelGroupElement e : groupElement.getChildren()) {
-                Pair<String, ModelPartData> d = devolve(data, e, c1);
-                c1.accept(d.getFirst(), d.getSecond());
+                Pair<String, ModelPartData> d = devolve(data, e, c1, c2, predicate);
+                if (d.hasFirst()) c1.accept(d.getFirst(), d.getSecond());
             }
             return Pair.of(groupElement.getName(), data);
         }
         int index = groupElement.getElement();
         ModelElement element = this.sourceAccessor.sf_getElements().get(index);
         NamedElementAccessor elementAccessor = (NamedElementAccessor) element;
+        if (predicate.test(elementAccessor.sf_getElemName())) return Pair.ofNull();
+        c2.accept(groupElement);
         ModelRotation rotation = elementAccessor.sf_getRotation();
         float fX = element.from.x();
         float fY = element.from.y();
         float fZ = element.from.z();
-        float p = rotation.axis() == Direction.Axis.X ? rotation.angle() : 0;
-        float y = rotation.axis() == Direction.Axis.Y ? rotation.angle() : 0;
-        float r = rotation.axis() == Direction.Axis.Z ? rotation.angle() : 0;
+        float p;
+        float y;
+        float r;
+        float rX;
+        float rY;
+        float rZ;
+        if (rotation == null) {
+            p = 0;
+            y = 0;
+            r = 0;
+            rX = 0;
+            rY = 0;
+            rZ = 0;
+        } else {
+            p = rotation.axis() == Direction.Axis.X ? rotation.angle() : 0;
+            y = rotation.axis() == Direction.Axis.Y ? rotation.angle() : 0;
+            r = rotation.axis() == Direction.Axis.Z ? rotation.angle() : 0;
+            rX = rotation.origin().x;
+            rY = rotation.origin().y;
+            rZ = rotation.origin().z;
+        }
         ModelPartBuilder builder = ModelPartBuilder.create()
                 .uv((int) elementAccessor.sf_getUvX(), (int) elementAccessor.sf_getUvY())
                 .cuboid(fX, fY, fZ, element.to.x() - fX, element.to.y() - fY, element.to.z() - fZ);
-        return Pair.of(elementAccessor.sf_getElemName(), parent.addChild(elementAccessor.sf_getElemName(), builder, ModelTransform.of(rotation.origin().x, rotation.origin().y, rotation.origin().z, p, y, r)));
+        ModelPartData child = parent.addChild(elementAccessor.sf_getElemName(), builder, ModelTransform.of(rX, rY, rZ, p, y, r));
+        c1.accept(elementAccessor.sf_getElemName(), child);
+        return Pair.of(elementAccessor.sf_getElemName(), child);
     }
 
     private Map<String, Integer> textureUsages() {

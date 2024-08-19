@@ -48,4 +48,8 @@ public final class Pair <E, F> {
     public static <E, F> Pair<E, F> ofNullable(E e, F f) {
         return new Pair<>(e, f);
     }
+
+    public static <E, F> Pair<E, F> ofNull() {
+        return new Pair<>(null, null);
+    }
 }
