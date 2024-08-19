@@ -35,10 +35,10 @@ public class GroupedBakedModelBuilder implements BakedModel {
 
     public GroupedBakedModelBuilder(BakedModel model, GroupedModelAccessor accessor) {
         if (model != accessor) throw new IllegalArgumentException("Different models provided");
-        Map<String, ModelPartData> map = bakeModel();
         Pair<Integer, Integer> pair = accessor.sf_getTextureSize();
         this.sourceModel = model;
         this.sourceAccessor = accessor;
+        Map<String, ModelPartData> map = bakeModel();
         this.namedMap = Collections.unmodifiableMap(map);
         this.texturedModelData = TexturedModelData.of(this.modelData, pair.getFirst(), pair.getSecond());
         StackFolliesClient.registerGroupedModel(this);
