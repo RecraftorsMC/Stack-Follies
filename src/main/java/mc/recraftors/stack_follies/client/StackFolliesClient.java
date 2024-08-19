@@ -11,6 +11,7 @@ import net.minecraft.client.render.entity.animation.Keyframe;
 import net.minecraft.client.render.entity.animation.Transformation;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.render.model.BakedModel;
+import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ItemStack;
@@ -51,6 +52,19 @@ public class StackFolliesClient implements ClientModInitializer {
                 transformation.target().apply(part, interpolation);
             });
         }
+    }
+
+    public static boolean render(
+            ItemStack stack, World world, LivingEntity entity, int seed, ItemRenderer renderer,
+            MatrixStack matrices, int light, int overlay, float red, float green, float blue, float alpha
+    ) {
+        Optional<GroupedBakedModel> model = getModel(stack, world, entity, seed, renderer);
+        model.ifPresentOrElse(
+                m -> render(m, matrices, light, overlay, red, green, blue, alpha),
+                () -> renderer.renderItem(stack, ModelTransformationMode.NONE, light, overlay, matrices,
+                        MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers(), world, seed)
+        );
+        return model.isPresent();
     }
 
     public static void render(GroupedBakedModel model, MatrixStack matrices, int light, int overlay, float red, float green, float blue, float alpha) {
