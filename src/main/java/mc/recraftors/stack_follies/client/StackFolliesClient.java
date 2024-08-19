@@ -64,13 +64,13 @@ public class StackFolliesClient implements ClientModInitializer {
     }
 
     public static boolean render(
-            ItemStack stack, World world, LivingEntity entity, int seed, ItemRenderer renderer,
+            ItemStack stack, World world, LivingEntity entity, int seed, ItemRenderer renderer, ModelTransformationMode transformationMode,
             MatrixStack matrices, int light, int overlay, float red, float green, float blue, float alpha
     ) {
         Optional<GroupedBakedModel> model = getModel(stack, world, entity, seed, renderer);
         model.ifPresentOrElse(
                 m -> render(m, matrices, light, overlay, red, green, blue, alpha),
-                () -> renderer.renderItem(stack, ModelTransformationMode.NONE, light, overlay, matrices,
+                () -> renderer.renderItem(stack, transformationMode, light, overlay, matrices,
                         MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers(), world, seed)
         );
         return model.isPresent();
