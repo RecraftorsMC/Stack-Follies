@@ -31,6 +31,15 @@ public class StackFolliesClient implements ClientModInitializer {
     public void onInitializeClient() {
     }
 
+    public static boolean animate(
+            ItemStack stack, World world, LivingEntity entity, int seed, ItemRenderer renderer,
+            Animation animation, long runningTime, float scale, Vector3f interpolation
+    ) {
+        Optional<GroupedBakedModel> model = getModel(stack, world, entity, seed, renderer);
+        model.ifPresent(m -> animate(m, animation, runningTime, scale, interpolation));
+        return model.isPresent();
+    }
+
     public static void animate(GroupedBakedModel model, Animation animation, long runningTime, float scale, Vector3f interpolation) {
         float f = getRunningSeconds(animation, runningTime);
 
