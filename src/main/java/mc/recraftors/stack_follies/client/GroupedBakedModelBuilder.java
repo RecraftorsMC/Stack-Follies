@@ -1,6 +1,7 @@
 package mc.recraftors.stack_follies.client;
 
 import mc.recraftors.stack_follies.accessors.GroupedModelAccessor;
+import mc.recraftors.stack_follies.accessors.ModelPartDepthAccessor;
 import mc.recraftors.stack_follies.accessors.NamedElementAccessor;
 import mc.recraftors.stack_follies.util.Pair;
 import net.minecraft.block.BlockState;
@@ -52,24 +53,35 @@ public class GroupedBakedModelBuilder implements BakedModel {
         }
         this.model = this.texturedModelData.createModel();
         Map<String, ModelPart> map = this.namedMap.keySet().stream()
-                .map(name -> new AbstractMap.SimpleEntry<>(name, model.getChild(name)))
+                .map(name -> new AbstractMap.SimpleEntry<>(name, ((ModelPartDepthAccessor)((Object)model)).sf_getChild(name).get()))
                 .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
         Map<String, Integer> tMap = this.textureUsages();
-        Identifier id = tMap.entrySet().stream().min((e1, e2) -> e2.getValue().compareTo(e1.getValue())).map(e -> this.sourceAccessor.sf_getTextureMap().get(e.getKey())).map(i -> i.getPath().matches(".*\\.[^/]+") ? i : Identifier.of(i.getNamespace(), i.getPath()+".png")).orElseThrow();
+        Identifier id = tMap.entrySet().stream()
+                .min((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
+                .map(e -> new AbstractMap.SimpleEntry<>(strip(e.getKey()), e.getValue()))
+                .map(e -> this.sourceAccessor.sf_getTextureMap().get(e.getKey()))
+                .orElseThrow();
         RenderLayer layer = RenderLayer.getEntityTranslucent(id);
         return new GroupedBakedModel(map, model, layer);
+    }
+
+    private static String strip(String s) {
+        return s.startsWith("#") ? s.substring(1) : s;
     }
 
     private Map<String, ModelPartData> bakeModel() {
         Map<String, ModelPartData> map = new HashMap<>();
         Set<ModelGroupElement> set = new HashSet<>(this.sourceAccessor.sf_getGroups());
         for (ModelGroupElement groupElement : this.sourceAccessor.sf_getGroups()) {
-            if (groupElement.getType() == ModelGroupElement.GroupType.ELEMENT) continue;
+            if (groupElement.getType() == ModelGroupElement.GroupType.ELEMENT) {
+                set.add(groupElement);
+                continue;
+            }
             Pair<String, ModelPartData> pair = devolve(this.modelData.getRoot(), groupElement, map::put, set::remove, map::containsKey);
             if (pair.hasFirst()) map.put(groupElement.getName(), pair.getSecond());
         }
         for (ModelGroupElement groupElement : set) {
-            Pair<String, ModelPartData> pair = devolve(this.modelData.getRoot(), groupElement, map::put, set::remove, map::containsKey);
+            Pair<String, ModelPartData> pair = devolve(this.modelData.getRoot(), groupElement, map::put, e -> {}, map::containsKey);
             if (pair.hasFirst()) map.put(groupElement.getName(), pair.getSecond());
         }
         return map;
