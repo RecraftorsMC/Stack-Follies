@@ -1,5 +1,7 @@
 package mc.recraftors.stack_follies.mixin.client;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.Share;
 import com.llamalad7.mixinextras.sugar.ref.LocalRef;
@@ -24,7 +26,6 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.*;
@@ -96,41 +97,42 @@ public abstract class JsonUnbakedModelMixin implements GroupedModelAccessor {
         ref.get().put(((NamedElementAccessor)modelElement).sf_getElemName(), map);
     }
 
-    @Redirect(
+    @WrapOperation(
             method = "bake(Lnet/minecraft/client/render/model/Baker;Lnet/minecraft/client/render/model/json/JsonUnbakedModel;Ljava/util/function/Function;Lnet/minecraft/client/render/model/ModelBakeSettings;Lnet/minecraft/util/Identifier;Z)Lnet/minecraft/client/render/model/BakedModel;",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/model/BasicBakedModel$Builder;addQuad(Lnet/minecraft/client/render/model/BakedQuad;)Lnet/minecraft/client/render/model/BasicBakedModel$Builder;")
     )
     private BasicBakedModel.Builder sf_bakeQuadNoCull(BasicBakedModel.Builder instance, BakedQuad quad,
+                                                      Operation<BasicBakedModel.Builder> original,
                                                       @Local Direction direction,
                                                       @Share("b") LocalRef<Map<Direction, BakedQuad>> ref) {
         if (!this.sf_isGrouped()) {
-            instance.addQuad(quad);
+            original.call(instance, quad);
         } else {
             ref.get().put(direction, quad);
         }
         return instance;
     }
 
-    @Redirect(
+    @WrapOperation(
             method = "bake(Lnet/minecraft/client/render/model/Baker;Lnet/minecraft/client/render/model/json/JsonUnbakedModel;Ljava/util/function/Function;Lnet/minecraft/client/render/model/ModelBakeSettings;Lnet/minecraft/util/Identifier;Z)Lnet/minecraft/client/render/model/BakedModel;",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/model/BasicBakedModel$Builder;addQuad(Lnet/minecraft/util/math/Direction;Lnet/minecraft/client/render/model/BakedQuad;)Lnet/minecraft/client/render/model/BasicBakedModel$Builder;")
     )
     private BasicBakedModel.Builder sf_bakeQuadCull(BasicBakedModel.Builder instance, Direction side, BakedQuad quad,
+                                                    Operation<BasicBakedModel.Builder> original,
                                                     @Share("b") LocalRef<Map<Direction, BakedQuad>> ref) {
         if (!this.sf_isGrouped()) {
-            return instance.addQuad(side, quad);
+            return original.call(instance, side, quad);
         }
         ref.get().put(side, quad);
         return instance;
     }
 
-    @Redirect(
+    @WrapOperation(
             method = "bake(Lnet/minecraft/client/render/model/Baker;Lnet/minecraft/client/render/model/json/JsonUnbakedModel;Ljava/util/function/Function;Lnet/minecraft/client/render/model/ModelBakeSettings;Lnet/minecraft/util/Identifier;Z)Lnet/minecraft/client/render/model/BakedModel;",
             at = @At(value = "INVOKE", target = "Ljava/util/function/Function;apply(Ljava/lang/Object;)Ljava/lang/Object;", ordinal = 0)
     )
-    private <T,R> R sf_bakeSprite(Function<T,R> instance, T t,
-                                 @Share("c") LocalRef<R> ref) {
-        ref.set(instance.apply(t));
+    private <T,R> R sf_bakeSprite2(Function<T,R> instance, T t, Operation<R> original, @Share("c") LocalRef<R> ref) {
+        ref.set(original.call(instance, t));
         return ref.get();
     }
 
