@@ -59,8 +59,6 @@ public abstract sealed class ModelGroupPart {
                                        boolean isSideLit, Sprite sprite, ModelTransformation transformation,
                                        ModelOverrideList overrideList) {
             GroupedModelPart target = modelMap.get(this.name);
-            System.out.println(this.name);
-            System.out.printf("[[ %s ]]%n", modelMap.keySet());
             return GroupedModelPart.element(this.name, target);
         }
     }
