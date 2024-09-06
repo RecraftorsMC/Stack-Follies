@@ -25,5 +25,7 @@ public interface ModelPartDepthAccessor {
         return this.sf_getChild(name, new HashSet<>());
     }
 
-    Map<String, ModelPart> sf_getChildren();
+    default Map<String, ModelPart> sf_getChildren() {
+        return Map.of();
+    }
 }

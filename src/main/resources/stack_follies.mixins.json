@@ -13,7 +13,6 @@
     "client.JsonUnbakedModelMixin",
     "client.ModelElementDeserializerMixin",
     "client.ModelElementMixin",
-    "client.ModelLoaderMixin",
     "client.ModelPartMixin"
   ],
   "injectors": {

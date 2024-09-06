@@ -1,11 +1,10 @@
 package mc.recraftors.stack_follies.client;
 
 import net.fabricmc.api.ClientModInitializer;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.block.StainedGlassPaneBlock;
+import net.minecraft.block.TransparentBlock;
 import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.*;
 import net.minecraft.client.render.entity.animation.Animation;
 import net.minecraft.client.render.entity.animation.Keyframe;
 import net.minecraft.client.render.entity.animation.Transformation;
@@ -14,38 +13,30 @@ import net.minecraft.client.render.model.BakedModel;
 import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 import org.joml.Vector3f;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 public class StackFolliesClient implements ClientModInitializer {
     public static final String MODEL_GROUP_PROCESSOR_KEY = "sf$computeGroups";
     public static final String MODEL_ELEM_NAME_KEY = "name";
-    private static final Map<BakedModel, GroupedBakedModelBuilder> BUILDER_MODEL_REGISTRY = new HashMap<>();
-    private static final Map<BakedModel, GroupedBakedModel> GROUPED_MODEL_REGISTRY = new HashMap<>();
-    private static final VertexConsumerProvider.Immediate PROVIDER = VertexConsumerProvider.immediate(new BufferBuilder(256));
 
     @Override
     public void onInitializeClient() {
     }
 
-    public static boolean animate(
-            ItemStack stack, World world, LivingEntity entity, int seed, ItemRenderer renderer,
-            Animation animation, long runningTime, float scale, Vector3f interpolation
-    ) {
-        Optional<GroupedBakedModel> model = getModel(stack, world, entity, seed, renderer);
-        model.ifPresent(m -> animate(m, animation, runningTime, scale, interpolation));
-        return model.isPresent();
-    }
-
-    public static void animate(GroupedBakedModel model, Animation animation, long runningTime, float scale, Vector3f interpolation) {
+    public static void animate(BakedModel model, Animation animation, long runningTime, float scale, Vector3f interpolation) {
         float f = getRunningSeconds(animation, runningTime);
+        if (!(model instanceof GroupedModelPart group)) return;
 
         for (Map.Entry<String, List<Transformation>> entry : animation.boneAnimations().entrySet()) {
-            Optional<ModelPart> optional = model.getChild(entry.getKey());
+            Optional<ModelPart> optional = group.sf_getChild(entry.getKey());
             if (optional.isEmpty()) continue;
             ModelPart part = optional.get();
             List<Transformation> list = entry.getValue();
@@ -65,67 +56,35 @@ public class StackFolliesClient implements ClientModInitializer {
     }
 
     public static boolean render(
-            ItemStack stack, World world, LivingEntity entity, int seed, ItemRenderer renderer, ModelTransformationMode transformationMode,
-            MatrixStack matrices, int light, int overlay, float red, float green, float blue, float alpha
+            ItemStack stack, World world, LivingEntity entity, int seed, int light, int overlay, ItemRenderer renderer,
+            ModelTransformationMode transformationMode, MatrixStack matrices,
+            VertexConsumerProvider vertices
     ) {
-        Optional<GroupedBakedModel> model = getModel(stack, world, entity, seed, renderer);
-        model.ifPresentOrElse(
-                m -> render(m, matrices, light, overlay, red, green, blue, alpha),
-                () -> renderer.renderItem(stack, transformationMode, light, overlay, matrices,
-                        MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers(), world, seed)
-        );
-        return model.isPresent();
+        return render(stack, world, entity,seed, light, overlay, renderer, transformationMode, matrices, vertices, true);
     }
 
-    public static void render(GroupedBakedModel model, MatrixStack matrices, int light, int overlay, float red, float green, float blue, float alpha) {
-        VertexConsumer vertices = PROVIDER.getBuffer(model.getLayer());
-        model.render(matrices, vertices, light, overlay, red, green, blue, alpha);
-        model.getRoot().traverse().forEach(ModelPart::resetTransform);
+    public static boolean render(
+            ItemStack stack, World world, LivingEntity entity, int seed, int light, int overlay, ItemRenderer renderer,
+            ModelTransformationMode transformationMode, MatrixStack matrices,
+            VertexConsumerProvider vertices, boolean resetTransform
+    ) {
+        BakedModel model = renderer.getModel(stack, world, entity, seed);
+        if (!(model instanceof GroupedModelPart part)) {
+            renderer.renderItem(entity, stack, transformationMode, false, matrices, vertices, world, light, overlay, seed);
+            return false;
+        }
+        boolean direct = (!(stack.getItem() instanceof BlockItem block) || !(block.getBlock() instanceof TransparentBlock || block.getBlock() instanceof StainedGlassPaneBlock));
+        RenderLayer renderLayer = RenderLayers.getItemLayer(stack, direct);
+        VertexConsumer vertex = direct ?
+                ItemRenderer.getDirectItemGlintConsumer(vertices, renderLayer, true, stack.hasGlint()) :
+                ItemRenderer.getItemGlintConsumer(vertices, renderLayer, true, stack.hasGlint());
+        part.sf_render(stack, matrices, vertex, light, overlay, renderer);
+        if (resetTransform) part.traverse().forEach(ModelPart::resetTransform);
+        return true;
     }
 
 	private static float getRunningSeconds(Animation animation, long runningTime) {
 		float f = (float)runningTime / 1000.0F;
 		return animation.looping() ? f % animation.lengthInSeconds() : f;
 	}
-
-    public static void modelReloadHandler() {
-        GROUPED_MODEL_REGISTRY.clear();
-        BUILDER_MODEL_REGISTRY.clear();
-    }
-
-    public static void registerGroupedModel(GroupedBakedModelBuilder groupedModel) {
-        Objects.requireNonNull(groupedModel);
-        BUILDER_MODEL_REGISTRY.putIfAbsent(groupedModel, groupedModel);
-    }
-
-    private static void request(BakedModel model) {
-        if (GROUPED_MODEL_REGISTRY.containsKey(model)) return;
-        BUILDER_MODEL_REGISTRY.computeIfPresent(model, (m, b) -> {
-            GROUPED_MODEL_REGISTRY.putIfAbsent(m, b.build());
-            return b;
-        });
-    }
-
-    static GroupedBakedModel getModel(BakedModel model) {
-        request(model);
-        return GROUPED_MODEL_REGISTRY.get(model);
-    }
-
-    public static Optional<GroupedBakedModel> getModel(ItemStack stack, int seed) {
-        return getModel(stack,null,  null, seed);
-    }
-
-    public static Optional<GroupedBakedModel> getModel(ItemStack stack, World world, int seed) {
-        return getModel(stack, world, null, seed);
-    }
-
-    public static Optional<GroupedBakedModel> getModel(ItemStack stack, World world, LivingEntity entity, int seed) {
-        return getModel(stack, world, entity, seed, MinecraftClient.getInstance().getItemRenderer());
-    }
-
-    public static Optional<GroupedBakedModel> getModel(ItemStack stack, World world, LivingEntity entity, int seed, ItemRenderer renderer) {
-        BakedModel model = renderer.getModel(stack, world, entity, seed);
-        request(model);
-        return Optional.ofNullable(GROUPED_MODEL_REGISTRY.get(model));
-    }
 }
