@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@SuppressWarnings("unused")
 public class StackFolliesClient implements ClientModInitializer {
     public static final String MODEL_GROUP_PROCESSOR_KEY = "sf$computeGroups";
     public static final String MODEL_ELEM_NAME_KEY = "name";

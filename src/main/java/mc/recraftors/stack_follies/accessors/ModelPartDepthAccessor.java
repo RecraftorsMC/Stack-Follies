@@ -14,7 +14,7 @@ public interface ModelPartDepthAccessor {
             Map<String, ModelPart> map = this.sf_getChildren();
             if (map.containsKey(name)) return Optional.of(map.get(name));
             for (Map.Entry<String, ModelPart> e : map.entrySet()) {
-                Optional<ModelPart> o = ((ModelPartDepthAccessor)((Object)e.getValue())).sf_getChild(name, set);
+                Optional<ModelPart> o = ((ModelPartDepthAccessor) e.getValue()).sf_getChild(name, set);
                 if (o.isPresent()) return o;
             }
         }

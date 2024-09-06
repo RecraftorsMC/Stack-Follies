@@ -3,7 +3,6 @@ package mc.recraftors.stack_follies.mixin.client;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.Share;
 import com.llamalad7.mixinextras.sugar.ref.LocalRef;
-import com.mojang.datafixers.util.Either;
 import mc.recraftors.stack_follies.accessors.GroupedModelAccessor;
 import mc.recraftors.stack_follies.accessors.NamedElementAccessor;
 import mc.recraftors.stack_follies.client.GroupedModelPart;
@@ -19,7 +18,6 @@ import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Direction;
-import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -38,17 +36,11 @@ public abstract class JsonUnbakedModelMixin implements GroupedModelAccessor {
 
     @Shadow public abstract List<ModelElement> getElements();
 
-    @Shadow @Final protected Map<String, Either<SpriteIdentifier, String>> textureMap;
-
     @Shadow protected abstract ModelOverrideList compileOverrides(Baker baker, JsonUnbakedModel parent);
-
-    @Shadow @Nullable protected JsonUnbakedModel parent;
-    @Shadow @Final private @Nullable Boolean ambientOcclusion;
 
     @Shadow public abstract JsonUnbakedModel.GuiLight getGuiLight();
 
     @Shadow @Final private ModelTransformation transformations;
-    @Shadow @Final private List<ModelElement> elements;
 
     @Shadow public abstract boolean useAmbientOcclusion();
 
