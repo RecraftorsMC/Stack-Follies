@@ -15,6 +15,7 @@ This means, the Json is expected to contain the following fields additionally to
 * Elements:
   * `name`: The element name, required to identify the element for targeted animations.<br>
     Beware, names must be unique both among elements and with the group ones in order to properly distinguish each element.
+    Otherwise, elements will override each-other, and it would cause the
 
 ### Groups
 
@@ -40,3 +41,13 @@ of parsing over the vanilla one.
 Then, based on this data, it constructs a matching entity-like model, that can be tweaked and animated at will, for
 more interesting rendering without the struggle of building entity models, as well as free customization via
 resource-packs.
+
+## How to animate and render a model
+
+All the needed hooks are on the `mc.recraftors.stack_follies.client.StackFolliesClient` class.
+You only to respectively use the `animate` and `render` methods to either change the model's
+inner transformation _using the vanilla entity animation classes_. Both will return whether
+the provided model, or model for the provided stack, is a grouped model.
+
+The `render` methods are thought to be called in a regular rendering context, especially entity rendering,
+but in order to handle fallbacks in case the expected model is not a grouped model.
