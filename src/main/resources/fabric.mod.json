@@ -19,7 +19,7 @@
     "repo": "https://github.com/NerjalNosk/Stack Follies"
   },
   "license": "GPL-3.0",
-  "icon": "assets/stack_follies/icon.png",
+  "icon": "assets/sf/icon.png",
   "environment": "*",
   "entrypoints": {
     "client": [
